@@ -1,0 +1,121 @@
+networks:
+  tycho-network:
+    name: tycho-network
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.default_bridge: "false"
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+      com.docker.network.bridge.name: "docker1"
+      com.docker.network.driver.mtu: "1500"
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+
+services:
+  apache:
+    image: tychobrahe/tycho-apache:latest
+    container_name: apache
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.99
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/httpd:/data/httpd
+
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.98
+    volumes:
+      - ./conf/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ${DEFAULT_ROOT_FOLDER}/backup:/data/backup
+      - ${DEFAULT_ROOT_FOLDER}/mongo/configdb:/data/configdb
+      - ${DEFAULT_ROOT_FOLDER}/mongo/db:/data/db
+      - ${DEFAULT_ROOT_FOLDER}/httpd:/data/httpd
+
+  rabbitmq:
+    build:
+      context: .
+      dockerfile: DockerfileRabbit
+    container_name: rabbitmq
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.97
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/rabbitmq:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    depends_on:
+      - mongodb
+
+  redis:
+    image: redis:8.0.1-alpine
+    container_name: redis
+    command: ["redis-server", "--requirepass", "TPRovENTrIcu"]
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.83
+    volumes:
+      - /DEFAULT_ROOT_FOLDER/redis:/data
+    ports:
+      - "6379:6379"
+    depends_on:
+      - rabbitmq
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    environment:
+      - DOZZLE_BASE=/dozzle
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.83
+    ports:
+      - "8080:8080"
+
+  eureka:
+    image: tychobrahe/tycho-eureka:latest
+    container_name: eureka
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.95
+    depends_on:
+      - redis
+    environment:
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+
+  configserver:
+    image: tychobrahe/tycho-configserver:latest
+    container_name: configserver
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.91
+    depends_on:
+      - eureka
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env

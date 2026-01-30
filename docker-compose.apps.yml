@@ -1,0 +1,276 @@
+networks:
+  tycho-network:
+    external: true
+    name: tycho-network
+
+services:
+  tycho-auth-api:
+    image: tychobrahe/tycho-auth-api:latest
+    container_name: tycho-auth-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.52
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-functions-api:
+    image: tychobrahe/tycho-functions-api:latest
+    container_name: tycho-functions-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.51
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/httpd:/data/httpd
+      - ${DEFAULT_ROOT_FOLDER}/backup:/data/backup
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - tycho-auth-api
+
+  tycho-admin-api:
+    image: tychobrahe/tycho-admin-api:latest
+    container_name: tycho-admin-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.2
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/backup:/data/backup
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-functions-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-catalog-api:
+    image: tychobrahe/tycho-catalog-api:latest
+    container_name: tycho-catalog-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.30
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-admin-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-parser-engine-api:
+    image: tychobrahe/tycho-parser-engine-api:latest
+    container_name: tycho-parser-engine-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.53
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/httpd:/data/httpd
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-catalog-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-parser-api:
+    image: tychobrahe/tycho-parser-api:latest
+    container_name: tycho-parser-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.6
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-parser-engine-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-revision-api:
+    image: tychobrahe/tycho-revision-api:latest
+    container_name: tycho-revision-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.24
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-parser-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-search-api:
+    image: tychobrahe/tycho-search-api:latest
+    container_name: tycho-search-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.4
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/httpd/upload:/data/httpd/upload
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-revision-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-io-api:
+    image: tychobrahe/tycho-io-api:latest
+    container_name: tycho-io-api
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.12
+    volumes:
+      - ${DEFAULT_ROOT_FOLDER}/httpd:/data/httpd
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
+    depends_on:
+      - tycho-search-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tycho-auth-front:
+    image: tychobrahe/tycho-auth-front:${FRONT_TAG}
+    container_name: tycho-auth-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.55
+
+  tycho-catalog-front:
+    image: tychobrahe/tycho-catalog-front:${FRONT_TAG}
+    container_name: tycho-catalog-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.31
+
+  tycho-admin-front:
+    image: tychobrahe/tycho-admin-front:${FRONT_TAG}
+    container_name: tycho-admin-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.3
+
+  tycho-search-front:
+    image: tychobrahe/tycho-search-front:${FRONT_TAG}
+    container_name: tycho-search-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.5
+
+  tycho-parser-front:
+    image: tychobrahe/tycho-parser-front:${FRONT_TAG}
+    container_name: tycho-parser-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.7
+
+  tycho-io-front:
+    image: tychobrahe/tycho-io-front:${FRONT_TAG}
+    container_name: tycho-io-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.13
+
+  tycho-revision-front:
+    image: tychobrahe/tycho-revision-front:${FRONT_TAG}
+    container_name: tycho-revision-front
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.25
+
+  tycho-ai:
+    image: tychobrahe/tycho-ai:${FRONT_TAG}
+    container_name: tycho-ai
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.84

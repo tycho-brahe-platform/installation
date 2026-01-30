@@ -1,0 +1,19 @@
+networks:
+  tycho-network:
+    external: true
+    name: tycho-network
+
+services:
+  gateway:
+    image: tychobrahe/tycho-gateway:latest
+    container_name: gateway
+    platform: ${DOCKER_PLATFORM}
+    restart: unless-stopped
+    networks:
+      tycho-network:
+        ipv4_address: 172.18.0.90
+    environment:
+      - SPRING_PROFILES_ACTIVE=${PROFILE}
+      - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
