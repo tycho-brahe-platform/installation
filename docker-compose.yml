@@ -87,7 +87,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       tycho-network:
-        ipv4_address: 172.18.0.83
+        ipv4_address: 172.18.0.96
     ports:
       - "8080:8080"
 
