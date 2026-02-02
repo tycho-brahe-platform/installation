@@ -5,6 +5,21 @@ export DOCKER_PLATFORM="linux/amd64"
 TYCHO_SERVER_ADDRESS=http://local.tychoplatform.com
 PROFILE=develop
 FRONT_TAG=latest
+SKIP_DOWNLOAD=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --skip-download|-s)
+      SKIP_DOWNLOAD=true
+      ;;
+    -h|--help)
+      echo "Usage: $0 [OPTIONS]"
+      echo "  --skip-download, -s    Skip downloading and extracting the package (use existing files)"
+      echo "  -h, --help             Show this help"
+      exit 0
+      ;;
+  esac
+done
 
 echo "🚀 Welcome to the Tycho Server Installer for Linux"
 
@@ -19,14 +34,19 @@ ROOT_FOLDER=${ROOT_FOLDER:-$DEFAULT_FOLDER}
 
 echo "✅ Installation folder set to: $ROOT_FOLDER"
 
-# Step 2: Download compacted file from Github
-echo "📦 Downloading the Tycho Server package..."
-curl -L -o tycho-server.zip https://github.com/tycho-brahe-platform/installation/raw/main/install/tycho-server.zip
+if [ "$SKIP_DOWNLOAD" = false ]; then
+  # Step 2: Download compacted file from Github
+  echo "📦 Downloading the Tycho Server package..."
+  curl -L -o tycho-server.zip https://github.com/tycho-brahe-platform/installation/raw/main/install/tycho-server.zip
 
-# Step 3: Extract files to the root folder
-echo "📂 Extracting files..."
-mkdir -p "$ROOT_FOLDER"
-unzip -q tycho-server.zip -d "$ROOT_FOLDER"
+  # Step 3: Extract files to the root folder
+  echo "📂 Extracting files..."
+  mkdir -p "$ROOT_FOLDER"
+  unzip -q tycho-server.zip -d "$ROOT_FOLDER"
+else
+  echo "⏭️  Skipping download and extract (--skip-download)"
+  mkdir -p "$ROOT_FOLDER"
+fi
 
 # Step 4: Create subfolders
 echo "📁 Creating subfolders..."
