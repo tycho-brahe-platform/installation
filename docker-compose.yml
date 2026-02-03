@@ -61,6 +61,8 @@ services:
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     depends_on:
       - mongodb
+    env_file:
+      - .env
 
   redis:
     image: redis:8.0.1-alpine
@@ -76,6 +78,8 @@ services:
       - "6379:6379"
     depends_on:
       - rabbitmq
+    env_file:
+      - .env
 
   dozzle:
     image: amir20/dozzle:latest
@@ -90,6 +94,8 @@ services:
         ipv4_address: 172.18.0.96
     ports:
       - "8080:8080"
+    env_file:
+      - .env
 
   eureka:
     image: tychobrahe/tycho-eureka:latest
@@ -103,6 +109,8 @@ services:
       - redis
     environment:
       - JAVA_TOOL_OPTIONS=${COMMON_JAVA_OPTS}
+    env_file:
+      - .env
 
   configserver:
     image: tychobrahe/tycho-configserver:latest

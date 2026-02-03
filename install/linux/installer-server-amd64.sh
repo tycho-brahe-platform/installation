@@ -3,7 +3,7 @@ set -e
 
 export DOCKER_PLATFORM="linux/amd64"
 TYCHO_SERVER_ADDRESS=http://local.tychoplatform.com
-PROFILE=develop
+PROFILE=dev
 FRONT_TAG=latest
 SKIP_DOWNLOAD=false
 

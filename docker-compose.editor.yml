@@ -125,9 +125,9 @@ services:
       tycho-network:
         ipv4_address: 172.18.0.9
 
-  tycho-browser-front:
-    image: tychobrahe/tycho-browser-front:${FRONT_TAG}
-    container_name: tycho-browser-front
+  tycho-viewer-front:
+    image: tychobrahe/tycho-viewer-front:${FRONT_TAG}
+    container_name: tycho-viewer-front
     platform: ${DOCKER_PLATFORM}
     restart: unless-stopped
     networks:
